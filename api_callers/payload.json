@@ -1,0 +1,12 @@
+{
+    "model": "gemma:2b",
+    "website_cap": 2,
+    "limit": 2000,
+    "limit_alt": 1000,
+    "run": true,
+    "run_args": {
+        "system": "Try to just answer the questions no bluff",
+        "prompt": "Who are Steve Jobs' biological parents"
+    },
+    "output_json": "./output.json"
+}
