@@ -31,6 +31,7 @@ limit_alt = payload_config["limit_alt"]
 run = payload_config["run"]
 run_args = payload_config["run_args"]
 output = payload_config["output_json"]
+web = payload_config["web"]
 ddg_api = Duckduckgo()
 if os.path.exists(output):
     print("[WARN] The output file already exists overwriting")
@@ -55,6 +56,7 @@ class Query:
         )
         return chunk["message"]["content"]
     def web_search(self) -> str:
+        self.ran = time.time_ns()
         stream = ddg_api.search(self.prompt)
         contexts = ""
         print("loading web data")
@@ -80,29 +82,21 @@ class Query:
         print("duration:", self.duration / 1000000000)
         return str(chunk["message"]["content"]).replace("Sure, here is the summary you requested:\n", "")
     def run(self) -> str:
-        if self.prompt == "":
-            raise Exception("prompt is empty")
         self.ran = time.time_ns()
-        print("search checking")
-        if not self.will_search():
-            chunk = ollama.chat(
-                model=model,
-                messages=[
-                    {"role": "system", "content": self.system},
-                    {"role": "user", "content": self.prompt}
-                ],
-            )
-            self.done = time.time_ns()
-            self.duration = self.done - self.ran
-            print("duration:", self.duration / 1000000000)
-            return chunk["message"]["content"]
-        else:
-            return self.web_search()
+        offline_model = payload_config["enhanced_offline"] if payload_config["enhanced_offline"] else model
+        result = ollama.chat(model=offline_model,
+                           messages=[{"role": "system", "content": self.system},
+                           {"role": "user", "content": self.prompt}])["message"]["content"]
+        self.done = time.time_ns()
+        self.duration = self.done - self.ran
+        return result.replace("**Summary**:", "")
+
 
 if run:
     q = Query(run_args["prompt"], run_args["system"])
-    result = q.run()
+    result = q.run() if not web else q.web_search()
     sys.stdout = old_stdout
+    print(buffer.getvalue())
     output_data = {
         "logs": buffer.getvalue(),
         "response": result,
